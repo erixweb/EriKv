@@ -17,27 +17,25 @@ async function insert(db, key, value) {
 	const kvContents = JSON.parse(readKv)
 	const entries = Object.entries(value)
 	function findDuplicates(entries) {
-        let duplicateKeys = false
+		let duplicateKeys = false
 		entries.forEach((entry) => {
 			if (entry[0].startsWith("u")) {
 				const findDuplicates = kvContents.find(
 					(kv) => kv[`${key}`][`${entry[0]}`] === entry[1]
 				)
-                if (findDuplicates) {
-                    duplicateKeys = true
-                }
+				if (findDuplicates) {
+					duplicateKeys = true
+				}
 			}
 		})
 
-        return duplicateKeys
+		return duplicateKeys
 	}
-    if (findDuplicates(entries)) return { code: 500, statusTxt: "Duplicate keys found" }
-	if (!findDuplicates(entries)) {
-		kvContents.push({ posts: value })
-		await writeFile(kv, JSON.stringify(kvContents))
-	}
+	if (findDuplicates(entries)) return { code: 500, statusTxt: "Duplicate keys found" }
+	kvContents.push({ posts: value })
+	await writeFile(kv, JSON.stringify(kvContents))
 }
 
 const db = openKv()
 
-insert(db, "posts", { uID: Math.floor(Math.random() * 10),  d: "lol" })
+insert(db, "posts", { uID: Math.floor(Math.random() * 10), d: "lol" })
