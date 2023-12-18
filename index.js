@@ -8,6 +8,21 @@ async function openKv(fileName = "./kv-database.json") {
 
 	return fileName
 }
+function findDuplicates(entries, key, kvContents) {
+    let duplicateKeys = false
+    entries.forEach((entry) => {
+        if (entry[0].startsWith("u")) {
+            const findDuplicates = kvContents.find(
+                (kv) => kv[`${key}`][`${entry[0]}`] === entry[1]
+            )
+            if (findDuplicates) {
+                duplicateKeys = true
+            }
+        }
+    })
+
+    return duplicateKeys
+}
 async function insert(db, key, value) {
 	const kv = await db
 	const readKv = await readFile(kv)
@@ -16,26 +31,15 @@ async function insert(db, key, value) {
 	 */
 	const kvContents = JSON.parse(readKv)
 	const entries = Object.entries(value)
-	function findDuplicates(entries) {
-		let duplicateKeys = false
-		entries.forEach((entry) => {
-			if (entry[0].startsWith("u")) {
-				const findDuplicates = kvContents.find(
-					(kv) => kv[`${key}`][`${entry[0]}`] === entry[1]
-				)
-				if (findDuplicates) {
-					duplicateKeys = true
-				}
-			}
-		})
-
-		return duplicateKeys
-	}
-	if (findDuplicates(entries)) return { code: 500, statusTxt: "Duplicate keys found" }
+	if (findDuplicates(entries, key, kvContents)) return { code: 500, statusTxt: "Duplicate keys found" }
 	kvContents.push({ posts: value })
 	await writeFile(kv, JSON.stringify(kvContents))
+}
+function uid (len) {
+    return Math.ceil(Math.random() * Date.now()).toPrecision(len).toString().replace(".", "")
 }
 
 const db = openKv()
 
-insert(db, "posts", { uID: Math.floor(Math.random() * 10), d: "lol" })
+insert(db, "posts", { uID: uid(), name: "Erik" })
+
