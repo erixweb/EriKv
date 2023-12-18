@@ -1,3 +1,5 @@
+// @ts-check
+
 import { writeFile, readFile } from "fs/promises"
 import { existsSync } from "fs"
 
@@ -23,23 +25,58 @@ function findDuplicates(entries, key, kvContents) {
 
     return duplicateKeys
 }
+function strictType(entries, key, kvContents) {
+    let correctlyTyped = true
+    entries.forEach((entry) => {
+        if (entry[0].endsWith("&")) {
+            const checkTypes = kvContents.find(
+                (kv) => typeof kv[`${key}`][`${entry[0]}`] !== typeof entry[1]
+            )
+            if (checkTypes) {
+                correctlyTyped = false
+            }
+        }
+    })
+
+    return !correctlyTyped
+}
 async function insert(db, key, value) {
-	const kv = await db
-	const readKv = await readFile(kv)
+	const kv = db
+	const readKv = (await readFile(kv)).toString()
+	
 	/**
 	 * @type { Array<JSON> }
 	 */
 	const kvContents = JSON.parse(readKv)
 	const entries = Object.entries(value)
 	if (findDuplicates(entries, key, kvContents)) return { code: 500, statusTxt: "Duplicate keys found" }
+	if (strictType(entries, key, kvContents)) return { code: 500, statusTxt: "Unequal types" }
 	kvContents.push({ posts: value })
 	await writeFile(kv, JSON.stringify(kvContents))
 }
-function uid (len) {
-    return Math.ceil(Math.random() * Date.now()).toPrecision(len).toString().replace(".", "")
+async function tableLen(db, table) {
+	const kv = db
+	const readKv = (await readFile(kv)).toString()
+
+	/**
+	 * @type { Array<JSON> }
+	 */
+	const kvContents = JSON.parse(readKv)
+	return kvContents.filter(e => Object.entries(e)[0][0] === table).length
 }
 
-const db = openKv()
+function uid (len) {
+	return Math.ceil(Math.random() * Date.now()).toPrecision(len).toString().replace(".", "")
+}
 
-insert(db, "posts", { uID: uid(), name: "Erik" })
+const db = await openKv()
 
+await insert(db, "posts", { "uID&": uid(), name: "Erik" })
+console.log(await tableLen(db, "posts"))
+
+/* 
+const time = new Date().getSeconds()
+while (new Date().getSeconds() === time) {
+	await insert(db, "posts", { "uID&": uid(), name: "Erik" })
+}
+ */
